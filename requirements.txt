@@ -1,0 +1,56 @@
+# Import necessary libraries
+import tensorflow as tf
+from tensorflow.keras import layers, models
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import matplotlib.pyplot as plt
+
+# Paths: Point to the main train and validation directories
+train_dir = r"C:\Users\Tolykoo\dataset-resized\train"
+val_dir = r"C:\Users\Tolykoo\dataset-resized\validation"
+
+# Data augmentation for better generalization (applies to training set only)
+train_datagen = ImageDataGenerator(rescale=1./255, rotation_range=40, width_shift_range=0.2,
+                                   height_shift_range=0.2, shear_range=0.2, zoom_range=0.2,
+                                   horizontal_flip=True, fill_mode='nearest')
+
+val_datagen = ImageDataGenerator(rescale=1./255)
+
+# Load images from directories (ensure structure is correct)
+train_generator = train_datagen.flow_from_directory(train_dir, target_size=(150, 150),
+                                                    batch_size=32, class_mode='categorical')
+
+val_generator = val_datagen.flow_from_directory(val_dir, target_size=(150, 150),
+                                                batch_size=32, class_mode='categorical')
+
+# Check that the class indices match your categories
+print(train_generator.class_indices)
+
+# Build a Convolutional Neural Network (CNN) model
+model = models.Sequential([
+    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(128, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Flatten(),
+    layers.Dense(512, activation='relu'),
+    layers.Dense(6, activation='softmax')  # 6 categories in TrashNet
+])
+
+# Compile the model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(train_generator, epochs=25, validation_data=val_generator)
+
+# Save the trained model
+model.save('waste_classification_model.h5')
+
+# Plot training history
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
